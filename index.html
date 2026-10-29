@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionnaire de Tâches Moderne</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons pour des icônes modernes -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Configuration Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Animations personnalisées */
+        .task-enter {
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .task-exit {
+            animation: slideOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-12px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                max-height: 80px;
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-10px) scale(0.95);
+                max-height: 0;
+                padding-top: 0;
+                padding-bottom: 0;
+                margin-top: 0;
+                margin-bottom: 0;
+                border: none;
+            }
+        }
+
+        /* Style de la barre de défilement */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 min-h-full flex items-center justify-center p-4 sm:p-6 md:p-8 text-slate-800">
+
+    <!-- Container principal -->
+    <main class="w-full max-w-xl bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-indigo-950/50 border border-white/20 overflow-hidden flex flex-col transition-all">
+        
+        <!-- En-tête de l'application -->
+        <header class="p-6 sm:p-8 bg-gradient-to-r from-indigo-600 to-violet-600 text-white relative overflow-hidden">
+            <!-- Cercles décoratifs d'arrière-plan -->
+            <div class="absolute -right-10 -top-10 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -left-10 -bottom-10 w-32 h-32 bg-indigo-400/20 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div class="relative z-10 flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-3">
+                        <i data-lucide="check-square" class="w-8 h-8 text-indigo-200"></i>
+                        Mes Tâches
+                    </h1>
+                    <p id="current-date" class="text-indigo-100 text-sm mt-1 capitalize font-medium opacity-90"></p>
+                </div>
+                
+                <!-- Badge indiquant la progression globale -->
+                <div class="text-right">
+                    <div id="progress-badge" class="bg-white/15 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-white/20 text-xs font-semibold tracking-wide uppercase text-indigo-100">
+                        0% Fait
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Formulaire d'ajout de tâche -->
+        <section class="p-6 sm:p-8 border-b border-slate-100 bg-slate-50/50">
+            <form id="todo-form" class="relative flex items-center">
+                <input 
+                    type="text" 
+                    id="todo-input" 
+                    placeholder="Qu'avez-vous à faire aujourd'hui ?" 
+                    class="w-full pl-4 pr-14 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm text-sm sm:text-base"
+                    autocomplete="off"
+                    required
+                >
+                <button 
+                    type="submit" 
+                    class="absolute right-2 p-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-indigo-500/25 flex items-center justify-center group"
+                    title="Ajouter la tâche"
+                >
+                    <i data-lucide="plus" class="w-5 h-5 group-hover:rotate-90 transition-transform duration-300"></i>
+                </button>
+            </form>
+        </section>
+
+        <!-- Filtres et actions globales -->
+        <section class="px-6 sm:px-8 py-3 bg-slate-100/60 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm font-medium">
+            <!-- Boutons de filtrage -->
+            <div class="flex items-center gap-1 bg-slate-200/60 p-1 rounded-xl">
+                <button id="filter-all" onclick="setFilter('all')" class="filter-btn active px-3 py-1.5 rounded-lg transition-all duration-200 bg-white shadow-sm text-indigo-600 font-semibold">Toutes</button>
+                <button id="filter-active" onclick="setFilter('active')" class="filter-btn px-3 py-1.5 rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900">Actives</button>
+                <button id="filter-completed" onclick="setFilter('completed')" class="filter-btn px-3 py-1.5 rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900">Terminées</button>
+            </div>
+
+            <!-- Action pour effacer les tâches terminées -->
+            <button 
+                id="clear-completed-btn" 
+                onclick="clearCompleted()" 
+                class="text-slate-500 hover:text-rose-600 transition-colors duration-200 flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-rose-50"
+            >
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Effacer les terminées</span>
+            </button>
+        </section>
+
+        <!-- Liste des tâches -->
+        <section class="p-6 sm:p-8 flex-1 max-h-[420px] overflow-y-auto">
+            <ul id="todo-list" class="space-y-3">
+                <!-- Les éléments de liste seront injectés dynamiquement ici -->
+            </ul>
+
+            <!-- Zone état vide (affichée lorsqu'il n'y a pas de tâches) -->
+            <div id="empty-state" class="hidden flex-col items-center justify-center py-10 text-center">
+                <div class="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-400 mb-3">
+                    <i data-lucide="inbox" class="w-8 h-8"></i>
+                </div>
+                <p id="empty-state-text" class="text-slate-500 font-medium">Aucune tâche pour le moment</p>
+                <p class="text-xs text-slate-400 mt-1">Ajoutez une nouvelle tâche ci-dessus pour commencer.</p>
+            </div>
+        </section>
+
+        <!-- Pied de page avec statistiques -->
+        <footer class="px-6 sm:px-8 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs sm:text-sm text-slate-500 font-medium">
+            <span id="items-left">0 tâche restante</span>
+            <button 
+                id="clear-all-btn" 
+                onclick="clearAll()" 
+                class="text-slate-400 hover:text-rose-600 transition-colors duration-200"
+            >
+                Tout supprimer
+            </button>
+        </footer>
+    </main>
+
+    <!-- Modal / Toast de confirmation personnalisée -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none z-50 text-sm">
+        <i data-lucide="info" class="w-5 h-5 text-indigo-400"></i>
+        <span id="toast-message">Message</span>
+    </div>
+
+    <!-- Logique JavaScript -->
+    <script>
+        // --- ÉTAT DE L'APPLICATION ---
+        let todos = [];
+        let currentFilter = 'all';
+
+        // --- ÉLÉMENTS DOM ---
+        const todoForm = document.getElementById('todo-form');
+        const todoInput = document.getElementById('todo-input');
+        const todoList = document.getElementById('todo-list');
+        const emptyState = document.getElementById('empty-state');
+        const emptyStateText = document.getElementById('empty-state-text');
+        const itemsLeft = document.getElementById('items-left');
+        const progressBadge = document.getElementById('progress-badge');
+        const currentDateEl = document.getElementById('current-date');
+        const toastEl = document.getElementById('toast');
+        const toastMessageEl = document.getElementById('toast-message');
+
+        // --- INITIALISATION ---
+        window.addEventListener('DOMContentLoaded', () => {
+            loadTodos();
+            displayCurrentDate();
+            render();
+            // Initialisation des icônes Lucide
+            lucide.createIcons();
+        });
+
+        // Affiche la date du jour en français
+        function displayCurrentDate() {
+            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            const today = new Date().toLocaleDateString('fr-FR', options);
+            currentDateEl.textContent = today;
+        }
+
+        // --- GESTION DU LOCALSTORAGE ---
+        function loadTodos() {
+            const saved = localStorage.getItem('todos_app_data');
+            if (saved) {
+                try {
+                    todos = JSON.parse(saved);
+                } catch (e) {
+                    console.error("Erreur lors du chargement des données depuis le localStorage", e);
+                    todos = [];
+                }
+            }
+        }
+
+        function saveTodos() {
+            localStorage.setItem('todos_app_data', JSON.stringify(todos));
+        }
+
+        // --- ACTIONS SUR LES TÂCHES ---
+
+        // Ajouter une tâche
+        todoForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = todoInput.value.trim();
+            if (!text) return;
+
+            const newTodo = {
+                id: Date.now().toString(),
+                text: text,
+                completed: false,
+                createdAt: new Date().toISOString()
+            };
+
+            todos.unshift(newTodo); // Ajoute au début de la liste
+            saveTodos();
+            todoInput.value = '';
+            render();
+            showToast("Tâche ajoutée avec succès !");
+        });
+
+        // Basculer l'état terminé / non terminé
+        function toggleTodo(id) {
+            todos = todos.map(todo => {
+                if (todo.id === id) {
+                    return { ...todo, completed: !todo.completed };
+                }
+                return todo;
+            });
+            saveTodos();
+            render();
+        }
+
+        // Supprimer une tâche
+        function deleteTodo(id) {
+            const element = document.getElementById(`todo-${id}`);
+            if (element) {
+                // Animation de sortie
+                element.classList.add('task-exit');
+                element.addEventListener('animationend', () => {
+                    todos = todos.filter(todo => todo.id !== id);
+                    saveTodos();
+                    render();
+                    showToast("Tâche supprimée");
+                });
+            }
+        }
+
+        // Filtrage des tâches
+        function setFilter(filter) {
+            currentFilter = filter;
+            
+            // Mise à jour visuelle des boutons de filtre
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-white', 'shadow-sm', 'text-indigo-600', 'font-semibold');
+                btn.classList.add('text-slate-600');
+            });
+
+            const activeBtn = document.getElementById(`filter-${filter}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-white', 'shadow-sm', 'text-indigo-600', 'font-semibold');
+                activeBtn.classList.remove('text-slate-600');
+            }
+
+            render();
+        }
+
+        // Effacer toutes les tâches terminées
+        function clearCompleted() {
+            const completedCount = todos.filter(t => t.completed).length;
+            if (completedCount === 0) {
+                showToast("Aucune tâche terminée à effacer");
+                return;
+            }
+
+            todos = todos.filter(todo => !todo.completed);
+            saveTodos();
+            render();
+            showToast(`${completedCount} tâche(s) terminée(s) effacée(s)`);
+        }
+
+        // Tout effacer
+        function clearAll() {
+            if (todos.length === 0) return;
+            
+            if (confirm("Êtes-vous sûr de vouloir supprimer toutes vos tâches ?")) {
+                todos = [];
+                saveTodos();
+                render();
+                showToast("Toutes les tâches ont été supprimées");
+            }
+        }
+
+        // --- AFFICHAGE / RENDU ---
+        function render() {
+            todoList.innerHTML = '';
+
+            // Appliquer le filtre courant
+            const filteredTodos = todos.filter(todo => {
+                if (currentFilter === 'active') return !todo.completed;
+                if (currentFilter === 'completed') return todo.completed;
+                return true; // 'all'
+            });
+
+            // Gérer l'état vide
+            if (filteredTodos.length === 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+
+                if (currentFilter === 'active') {
+                    emptyStateText.textContent = "Aucune tâche active pour le moment !";
+                } else if (currentFilter === 'completed') {
+                    emptyStateText.textContent = "Aucune tâche terminée.";
+                } else {
+                    emptyStateText.textContent = "Votre liste de tâches est vide !";
+                }
+            } else {
+                emptyState.classList.add('hidden');
+                emptyState.classList.remove('flex');
+            }
+
+            // Générer chaque tâche
+            filteredTodos.forEach(todo => {
+                const li = document.createElement('li');
+                li.id = `todo-${todo.id}`;
+                li.className = `task-enter group flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-100 hover:border-indigo-100 hover:shadow-md transition-all duration-200 ${todo.completed ? 'bg-slate-50/80' : ''}`;
+
+                li.innerHTML = `
+                    <div class="flex items-center gap-3.5 flex-1 min-w-0 mr-3">
+                        <button 
+                            onclick="toggleTodo('${todo.id}')"
+                            class="w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 shrink-0 ${
+                                todo.completed 
+                                    ? 'bg-indigo-600 border-indigo-600 text-white' 
+                                    : 'border-slate-300 hover:border-indigo-500 text-transparent'
+                            }"
+                            aria-label="Marquer comme ${todo.completed ? 'non terminée' : 'terminée'}"
+                        >
+                            <i data-lucide="check" class="w-4 h-4 stroke-[3]"></i>
+                        </button>
+                        <span class="text-sm sm:text-base break-words truncate font-medium transition-all duration-200 ${
+                            todo.completed 
+                                ? 'line-through text-slate-400' 
+                                : 'text-slate-700'
+                        }">
+                            ${escapeHtml(todo.text)}
+                        </span>
+                    </div>
+                    <button 
+                        onclick="deleteTodo('${todo.id}')"
+                        class="opacity-0 group-hover:opacity-100 sm:opacity-100 p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all duration-200 shrink-0"
+                        title="Supprimer la tâche"
+                    >
+                        <i data-lucide="trash" class="w-4.5 h-4.5"></i>
+                    </button>
+                `;
+
+                todoList.appendChild(li);
+            });
+
+            // Mise à jour des compteurs
+            updateStats();
+
+            // Mettre à jour les icônes injectées
+            lucide.createIcons();
+        }
+
+        // Mettre à jour les statistiques de bord
+        function updateStats() {
+            const activeCount = todos.filter(t => !t.completed).length;
+            const completedCount = todos.filter(t => t.completed).length;
+            const total = todos.length;
+
+            // Compteur dynamique au pluriel / singulier
+            itemsLeft.textContent = `${activeCount} tâche${activeCount > 1 ? 's' : ''} restante${activeCount > 1 ? 's' : ''}`;
+
+            // Calcul du pourcentage d'avancement
+            const percentage = total === 0 ? 0 : Math.round((completedCount / total) * 100);
+            progressBadge.textContent = `${percentage}% Fait`;
+        }
+
+        // Utilitaire pour afficher un petit toast de notification
+        let toastTimeout;
+        function showToast(message) {
+            toastMessageEl.textContent = message;
+            toastEl.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+            toastEl.classList.add('translate-y-0', 'opacity-100');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toastEl.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+                toastEl.classList.remove('translate-y-0', 'opacity-100');
+            }, 2500);
+        }
+
+        // Utilitaire de sécurité pour échapper les caractères HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
